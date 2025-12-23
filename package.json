@@ -1,6 +1,6 @@
 {
   "name": "zvuk-desktop",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Desktop Electron wrapper for Zvuk streaming service",
   "main": "main.js",
   "scripts": {
@@ -23,7 +23,18 @@
     "productName": "Zvuk Desktop",
     "mac": {
       "category": "public.app-category.music",
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icon.png"
+    },
+    "linux": {
+      "category": "AudioVideo",
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "icon": "build/icon.png"
     },
     "publish": [

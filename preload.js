@@ -1,3 +1,3 @@
 // preload.js — здесь можно добавлять мосты, если понадобится
 const { contextBridge } = require('electron')
-contextBridge.exposeInMainWorld('zvukApp', { version: '1.0.0' })
+contextBridge.exposeInMainWorld('zvukApp', { version: '1.1.0' })
