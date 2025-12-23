@@ -38,26 +38,59 @@ function createMenu(checkUpdates) {
 
 
 function createTray() {
-    const iconPath = path.join(__dirname, 'build', 'icon.png')
-    let image = nativeImage.createFromPath(iconPath)
+  const iconPath = path.join(__dirname, 'build', 'icon.png')
+  let image = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 })
 
-    // Принудительно поджать до 16x16
-    image = image.resize({width: 16, height: 16})
+  tray = new Tray(image)
 
-    tray = new Tray(image)
-
-    const contextMenu = Menu.buildFromTemplate([{
-        label: 'Открыть Zvuk', click: () => { /* ... */
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Открыть Zvuk',
+      click: () => {
+        if (!win || win.isDestroyed()) {
+          createWindow()
+        } else {
+          if (win.isMinimized()) win.restore()
+          win.show()
+          win.focus()
         }
-    }, {type: 'separator'}, {
-        label: 'Выход', click: () => {
-            isQuitting = true;
-            app.quit()
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Проверить обновления…',
+      click: () => checkForUpdates(true)
+    },
+    { type: 'separator' },
+    {
+      label: 'Выход',
+      click: () => {
+        isQuitting = true
+        if (tray) {
+          tray.destroy()
+          tray = null
         }
-    }])
+        app.quit()
+      }
+    }
+  ])
 
-    tray.setToolTip('Zvuk')
-    tray.setContextMenu(contextMenu)
+  tray.setToolTip('Zvuk Desktop')
+  tray.setContextMenu(contextMenu)
+
+  // На Linux часто работает только контекстное меню,
+  // но если click приходит — используем его.
+  tray.on('click', () => {
+    if (!win || win.isDestroyed()) {
+      createWindow()
+    } else if (win.isVisible()) {
+      win.hide()
+    } else {
+      if (win.isMinimized()) win.restore()
+      win.show()
+      win.focus()
+    }
+  })
 }
 
 function injectVisibilityPatch() {

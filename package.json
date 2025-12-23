@@ -8,7 +8,8 @@
     "pack": "electron-builder --dir",
     "dist": "electron-builder"
   },
-  "author": "Community",
+  "author": "Vladimir Kashin <vo.kashin@mail.ru>",
+  "email": "vo.kashin@mail.ru",
   "license": "MIT",
   "devDependencies": {
     "electron": "^31.0.0",
@@ -27,7 +28,8 @@
         "dmg",
         "zip"
       ],
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "artifactName": "Zvuk-Desktop-${version}-mac-${arch}.${ext}"
     },
     "linux": {
       "category": "AudioVideo",
@@ -35,7 +37,16 @@
         "AppImage",
         "deb"
       ],
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "artifactName": "Zvuk-Desktop-${version}-linux-${arch}.${ext}"
+    },
+    "win": {
+      "target": [
+        "portable",
+        "nsis"
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "Zvuk-Desktop-${version}-win-${arch}.${ext}"
     },
     "publish": [
       {
