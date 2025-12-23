@@ -25,10 +25,22 @@
     "mac": {
       "category": "public.app-category.music",
       "target": [
-        "dmg",
-        "zip"
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
-      "icon": "build/icon.png",
+      "icon": "resources/icon.png",
       "artifactName": "Zvuk-Desktop-${version}-mac-${arch}.${ext}"
     },
     "linux": {
@@ -37,7 +49,7 @@
         "AppImage",
         "deb"
       ],
-      "icon": "build/icon.png",
+      "icon": "resources/icon.png",
       "artifactName": "Zvuk-Desktop-${version}-linux-${arch}.${ext}"
     },
     "win": {
@@ -45,7 +57,7 @@
         "portable",
         "nsis"
       ],
-      "icon": "build/icon.ico",
+      "icon": "resources/icon.ico",
       "artifactName": "Zvuk-Desktop-${version}-win-${arch}.${ext}"
     },
     "publish": [
