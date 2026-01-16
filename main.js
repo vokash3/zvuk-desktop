@@ -132,16 +132,16 @@ function createWindow() {
         minimizable: true,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
-            nodeIntegration: false,
-            contextIsolation: true,
-            sandbox: true,
+            nodeIntegration: true,
+            contextIsolation: false,
+            webviewTag: true, 
             backgroundThrottling: false
         }
     })
 
     mainWindowState.manage(win)
 
-    win.loadURL('https://zvuk.com')
+    win.loadURL('file://' + __dirname + '/index.html');
     createMenu(checkForUpdates)
     // createTray()
 
