@@ -12,22 +12,24 @@
     }
     #controls {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      background-color: #333;
-      padding: 10px;
-      z-index: 1;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
     }
     #controls button {
       margin-right: 10px;
+      background-color: rgba(0,0,0,0.5);
+      color: white;
+      border: 1px solid white;
+      border-radius: 5px;
+      padding: 5px 10px;
     }
     #webview {
       position: absolute;
-      top: 50px; 
+      top: 0;
       left: 0;
       width: 100%;
-      height: calc(100% - 50px); 
+      height: 100%;
       border: none;
     }
   </style>
@@ -37,7 +39,7 @@
     <button id="back">Back</button>
     <button id="forward">Forward</button>
   </div>
-  <webview id="webview" src="https://zvuk.com" style="width:100%; height:100%;"></webview>
+  <webview id="webview" src="https://zvuk.com"></webview>
   <script src="./renderer.js"></script>
 </body>
 </html>
