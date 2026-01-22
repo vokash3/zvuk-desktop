@@ -1,6 +1,6 @@
 {
   "name": "zvuk-desktop",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Desktop Electron wrapper for Zvuk streaming service",
   "main": "main.js",
   "scripts": {

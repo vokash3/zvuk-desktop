@@ -1,29 +1,33 @@
-
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>Zvuk Desktop</title>
   <style>
-    body, html {
+    body,
+    html {
       margin: 0;
       padding: 0;
       height: 100%;
       overflow: hidden;
     }
+
     #controls {
       position: fixed;
       top: 10px;
       left: 10px;
       z-index: 10;
     }
+
     #controls button {
       margin-right: 10px;
-      background-color: rgba(0,0,0,0.5);
+      background-color: rgba(0, 0, 0, 0.5);
       color: white;
       border: 1px solid white;
       border-radius: 5px;
       padding: 5px 10px;
     }
+
     #webview {
       position: absolute;
       top: 0;
@@ -32,14 +36,56 @@
       height: 100%;
       border: none;
     }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .nav-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid white;
+      background-color: rgba(0, 0, 0, 0.5);
+      cursor: pointer;
+
+      /* иконка внутри */
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: 60%;
+    }
+
+    /* левая стрелка */
+    .nav-prev {
+      background-image: url("./icons/arrow-left.svg");
+    }
+
+    /* правая стрелка */
+    .nav-next {
+      background-image: url("./icons/arrow-right.svg");
+    }
   </style>
 </head>
+
 <body>
   <div id="controls">
-    <button id="back">Back</button>
-    <button id="forward">Forward</button>
+    <button id="back" class="nav-btn nav-prev">
+      <span class="visually-hidden">Back</span>
+    </button>
+    <button id="forward" class="nav-btn nav-next">
+      <span class="visually-hidden">Forward</span>
+    </button>
   </div>
   <webview id="webview" src="https://zvuk.com"></webview>
   <script src="./renderer.js"></script>
 </body>
+
 </html>
