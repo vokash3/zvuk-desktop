@@ -40,7 +40,7 @@
           ]
         }
       ],
-      "icon": "resources/icon.icns",
+      "icon": "resources/AppIcon.icns",
       "artifactName": "Zvuk-Desktop-${version}-mac-${arch}.${ext}"
     },
     "linux": {
