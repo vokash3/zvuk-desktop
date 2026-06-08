@@ -2,25 +2,29 @@ const {
   app,
   BrowserWindow,
   Menu,
-  dialog,
   shell,
   Tray,
   nativeImage,
+  dialog,
+  webContents,
 } = require("electron");
+
 const path = require("path");
 const windowStateKeeper = require("electron-window-state");
 const { autoUpdater } = require("electron-updater");
 
-// Improve background behavior
 app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
 app.commandLine.appendSwitch("disable-background-timer-throttling");
 app.commandLine.appendSwitch("disable-renderer-backgrounding");
 
-let win;
-let tray;
+let win = null;
+let tray = null;
 let isQuitting = false;
 
-function createMenu(checkUpdates) {
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
+
+function createMenu() {
   const template = [
     ...(process.platform === "darwin"
       ? [
@@ -31,7 +35,7 @@ function createMenu(checkUpdates) {
               { type: "separator" },
               {
                 label: "Проверить обновления…",
-                click: () => checkUpdates(true),
+                click: () => checkForUpdates(true),
               },
               { type: "separator" },
               { role: "services" },
@@ -40,7 +44,11 @@ function createMenu(checkUpdates) {
               { role: "hideothers" },
               { role: "unhide" },
               { type: "separator" },
-              { role: "quit" },
+              {
+                label: "Выход",
+                accelerator: "Cmd+Q",
+                click: forceQuit,
+              },
             ],
           },
         ]
@@ -74,17 +82,21 @@ function createMenu(checkUpdates) {
           label: "Открыть zvuk.com",
           click: () => shell.openExternal("https://zvuk.com"),
         },
-        { label: "Проверить обновления…", click: () => checkUpdates(true) },
+        {
+          label: "Проверить обновления…",
+          click: () => checkForUpdates(true),
+        },
       ],
     },
   ];
-  const menu = Menu.buildFromTemplate(template);
-  Menu.setApplicationMenu(menu);
+
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
 function createTray() {
   const iconPath = path.join(__dirname, "resources", "icon.png");
-  let image = nativeImage
+
+  const image = nativeImage
     .createFromPath(iconPath)
     .resize({ width: 16, height: 16 });
 
@@ -93,15 +105,7 @@ function createTray() {
   const contextMenu = Menu.buildFromTemplate([
     {
       label: "Открыть Zvuk",
-      click: () => {
-        if (!win || win.isDestroyed()) {
-          createWindow();
-        } else {
-          if (win.isMinimized()) win.restore();
-          win.show();
-          win.focus();
-        }
-      },
+      click: showWindow,
     },
     { type: "separator" },
     {
@@ -111,55 +115,71 @@ function createTray() {
     { type: "separator" },
     {
       label: "Выход",
-      click: () => {
-        isQuitting = true;
-        if (tray) {
-          tray.destroy();
-          tray = null;
-        }
-        app.quit();
-      },
+      click: forceQuit,
     },
   ]);
 
   tray.setToolTip("Zvuk Desktop");
   tray.setContextMenu(contextMenu);
 
-  // На Linux часто работает только контекстное меню,
-  // но если click приходит — используем его.
   tray.on("click", () => {
     if (!win || win.isDestroyed()) {
       createWindow();
-    } else if (win.isVisible()) {
+      return;
+    }
+
+    if (win.isVisible()) {
       win.hide();
     } else {
-      if (win.isMinimized()) win.restore();
-      win.show();
-      win.focus();
+      showWindow();
     }
   });
 }
 
+function showWindow() {
+  if (!win || win.isDestroyed()) {
+    createWindow();
+    return;
+  }
+
+  if (win.isMinimized()) {
+    win.restore();
+  }
+
+  win.show();
+  win.focus();
+}
+
 function injectVisibilityPatch() {
   if (!win || win.isDestroyed()) return;
+
   const script = `
-    (function(){
+    (function() {
       try {
         const define = (obj, prop, val) => {
-          try { Object.defineProperty(obj, prop, { get: () => val, configurable: true }); } catch {}
+          try {
+            Object.defineProperty(obj, prop, {
+              get: () => val,
+              configurable: true
+            });
+          } catch {}
         };
-        define(document, 'hidden', false);
-        define(document, 'visibilityState', 'visible');
-        // Neutralize listeners
+
+        define(document, "hidden", false);
+        define(document, "visibilityState", "visible");
+
         const origAdd = document.addEventListener.bind(document);
-        document.addEventListener = function(type, listener, options){
-          if (type === 'visibilitychange') return; // ignore
+
+        document.addEventListener = function(type, listener, options) {
+          if (type === "visibilitychange") return;
           return origAdd(type, listener, options);
         };
-        document.dispatchEvent(new Event('visibilitychange'));
+
+        document.dispatchEvent(new Event("visibilitychange"));
       } catch (e) {}
     })();
   `;
+
   win.webContents.executeJavaScript(script).catch(() => {});
 }
 
@@ -188,19 +208,25 @@ function createWindow() {
 
   mainWindowState.manage(win);
 
-  win.loadURL("file://" + __dirname + "/index.html");
-  createMenu(checkForUpdates);
-  // createTray()
+  win.loadURL(`file://${path.join(__dirname, "index.html")}`);
 
-  // Keep a single window instance alive
-  win.on("close", (e) => {
+  win.on("close", (event) => {
     if (!isQuitting) {
-      e.preventDefault();
+      event.preventDefault();
       win.hide();
     }
   });
 
-  // Patch after load and when we show again
+  win.on("closed", () => {
+    win = null;
+  });
+
+  win.webContents.on("will-prevent-unload", (event) => {
+    if (isQuitting) {
+      event.preventDefault();
+    }
+  });
+
   win.webContents.on("did-finish-load", injectVisibilityPatch);
   win.on("show", injectVisibilityPatch);
 
@@ -210,10 +236,75 @@ function createWindow() {
   });
 }
 
-// ===== Auto Updates =====
-const { dialog: sysDialog } = require("electron");
-autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = true;
+async function killWebview() {
+  if (!win || win.isDestroyed()) return;
+
+  const webviewId = await win.webContents
+    .executeJavaScript(
+      `
+      (() => {
+        const webview = document.querySelector("webview");
+        return webview ? webview.getWebContentsId() : null;
+      })();
+    `,
+    )
+    .catch(() => null);
+
+  if (!webviewId) return;
+
+  const guest = webContents.fromId(webviewId);
+
+  if (guest && !guest.isDestroyed()) {
+    guest.forcefullyCrashRenderer();
+  }
+}
+
+async function prepareForRealQuit() {
+  isQuitting = true;
+
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
+
+  await killWebview();
+
+  if (win && !win.isDestroyed()) {
+    win.removeAllListeners("close");
+    win.destroy();
+    win = null;
+  }
+}
+
+async function forceQuit() {
+  await prepareForRealQuit();
+  app.quit();
+}
+
+function checkForUpdates(manual = false) {
+  autoUpdater
+    .checkForUpdates()
+    .then((result) => {
+      const latestVersion = result?.updateInfo?.version;
+      const currentVersion = app.getVersion();
+
+      if (manual && (!latestVersion || latestVersion === currentVersion)) {
+        dialog.showMessageBox({
+          type: "info",
+          buttons: ["OK"],
+          title: "Проверка обновлений",
+          message: "У вас установлена последняя версия.",
+        });
+      }
+    })
+    .catch((err) => {
+      if (manual) {
+        dialog.showErrorBox("Ошибка проверки обновлений", String(err));
+      }
+
+      console.error("Update check error:", err);
+    });
+}
 
 autoUpdater.on("error", (err) => {
   console.error(
@@ -223,7 +314,7 @@ autoUpdater.on("error", (err) => {
 });
 
 autoUpdater.on("update-available", async (info) => {
-  const result = await sysDialog.showMessageBox({
+  const result = await dialog.showMessageBox({
     type: "question",
     buttons: ["Установить", "Позже"],
     title: "Доступно обновление",
@@ -231,13 +322,14 @@ autoUpdater.on("update-available", async (info) => {
     cancelId: 1,
     defaultId: 0,
   });
+
   if (result.response === 0) {
     autoUpdater.downloadUpdate();
   }
 });
 
-autoUpdater.on("update-downloaded", async (info) => {
-  const result = await sysDialog.showMessageBox({
+autoUpdater.on("update-downloaded", async () => {
+  const result = await dialog.showMessageBox({
     type: "question",
     buttons: ["Перезапустить и установить", "Позже"],
     title: "Обновление скачано",
@@ -248,56 +340,42 @@ autoUpdater.on("update-downloaded", async (info) => {
   });
 
   if (result.response === 0) {
-    isQuitting = true;
+    await prepareForRealQuit();
 
-    if (tray) {
-      tray.destroy();
-      tray = null;
-    }
-
-    autoUpdater.quitAndInstall(false, true);
+    setTimeout(() => {
+      autoUpdater.quitAndInstall(false, true);
+    }, 500);
   }
 });
 
-function checkForUpdates(manual = false) {
-  autoUpdater
-    .checkForUpdates()
-    .then((result) => {
-      if (
-        manual &&
-        (!result ||
-          !result.updateInfo ||
-          result.updateInfo.version === app.getVersion())
-      ) {
-        sysDialog.showMessageBox({
-          type: "info",
-          buttons: ["OK"],
-          title: "Проверка обновлений",
-          message: "У вас установлена последняя версия.",
-        });
-      }
-    })
-    .catch((err) => {
-      if (manual) {
-        sysDialog.showErrorBox("Ошибка проверки обновлений", String(err));
-      }
-    });
-}
+autoUpdater.on("before-quit-for-update", () => {
+  isQuitting = true;
+});
 
 app.whenReady().then(() => {
-  if (process.platform === "darwin") app.dock.show();
+  if (process.platform === "darwin") {
+    app.dock.show();
+  }
+
+  createMenu();
   createWindow();
   createTray();
+
   checkForUpdates(false);
 });
 
 app.on("before-quit", () => {
   isQuitting = true;
 });
+
 app.on("activate", () => {
-  if (!win || win.isDestroyed()) createWindow();
-  else {
-    win.show();
+  if (!isQuitting) {
+    showWindow();
   }
 });
-app.on("window-all-closed", () => {});
+
+app.on("window-all-closed", () => {
+  if (isQuitting) {
+    app.quit();
+  }
+});
