@@ -1,6 +1,6 @@
 {
   "name": "zvuk-desktop",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "Desktop Electron wrapper for Zvuk streaming service",
   "main": "main.js",
   "scripts": {
@@ -16,6 +16,7 @@
     "electron-builder": "^26.15.0"
   },
   "dependencies": {
+    "electron-log": "^5.4.4",
     "electron-updater": "^6.3.9",
     "electron-window-state": "^5.0.3"
   },
@@ -24,17 +25,13 @@
     "productName": "Zvuk Desktop",
     "artifactName": "Zvuk-Desktop-${version}-${os}-${arch}.${ext}",
     "mac": {
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
       "category": "public.app-category.music",
       "target": [
         {
           "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        },
-        {
-          "target": "zip",
           "arch": [
             "x64",
             "arm64"

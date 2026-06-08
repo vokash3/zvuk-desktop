@@ -12,6 +12,28 @@ const {
 const path = require("path");
 const windowStateKeeper = require("electron-window-state");
 const { autoUpdater } = require("electron-updater");
+const log = require("electron-log");
+autoUpdater.logger = log;
+autoUpdater.logger.transports.file.level = "debug";
+log.info("Application started");
+autoUpdater.on("checking-for-update", () => {
+  log.info("checking-for-update");
+});
+autoUpdater.on("update-available", (info) => {
+  log.info("update-available", info.version);
+});
+autoUpdater.on("update-not-available", () => {
+  log.info("update-not-available");
+});
+autoUpdater.on("download-progress", (p) => {
+  log.info(`download ${p.percent}%`);
+});
+autoUpdater.on("update-downloaded", () => {
+  log.info("update-downloaded");
+});
+autoUpdater.on("before-quit-for-update", () => {
+  log.info("before-quit-for-update");
+});
 
 app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
 app.commandLine.appendSwitch("disable-background-timer-throttling");
@@ -85,6 +107,13 @@ function createMenu() {
         {
           label: "Проверить обновления…",
           click: () => checkForUpdates(true),
+        },
+        {
+          label: "Страница обновлений на GitHub",
+          click: () =>
+            shell.openExternal(
+              "https://github.com/vokash3/zvuk-desktop/releases",
+            ),
         },
       ],
     },
@@ -328,7 +357,11 @@ autoUpdater.on("update-available", async (info) => {
   }
 });
 
+let isInstallingUpdate = false;
+
 autoUpdater.on("update-downloaded", async () => {
+  if (isInstallingUpdate) return;
+
   const result = await dialog.showMessageBox({
     type: "question",
     buttons: ["Перезапустить и установить", "Позже"],
@@ -339,17 +372,31 @@ autoUpdater.on("update-downloaded", async () => {
     defaultId: 0,
   });
 
-  if (result.response === 0) {
-    await prepareForRealQuit();
+  if (result.response !== 0) return;
 
-    setTimeout(() => {
-      autoUpdater.quitAndInstall(false, true);
-    }, 500);
-  }
-});
-
-autoUpdater.on("before-quit-for-update", () => {
+  isInstallingUpdate = true;
   isQuitting = true;
+
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
+
+  await killWebview();
+
+  if (win && !win.isDestroyed()) {
+    win.removeAllListeners("close");
+    win.close();
+  }
+
+  setTimeout(() => {
+    log.info("CALL quitAndInstall");
+    log.info("isQuitting =", isQuitting);
+    log.info("win exists =", !!win);
+    log.info("tray exists =", !!tray);
+
+    autoUpdater.quitAndInstall(false, true);
+  }, 3000);
 });
 
 app.whenReady().then(() => {
@@ -375,6 +422,10 @@ app.on("activate", () => {
 });
 
 app.on("window-all-closed", () => {
+  if (isInstallingUpdate) {
+    return;
+  }
+
   if (isQuitting) {
     app.quit();
   }
